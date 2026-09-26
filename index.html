@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PASINDAYAG S2 SMS Monitor</title>
+<style>
+:root{--p:#5b21b6;--p2:#7c3aed;--bg:#f5f3ff;--card:#fff;--txt:#1f2937;--muted:#6b7280;--ok:#166534;--bad:#b91c1c}
+*{box-sizing:border-box}body{margin:0;font-family:Arial,sans-serif;background:var(--bg);color:var(--txt)}
+header{background:linear-gradient(135deg,var(--p),var(--p2));color:#fff;padding:22px}
+.wrap{max-width:1180px;margin:auto;padding:18px}.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.card{background:var(--card);border-radius:14px;padding:16px;box-shadow:0 5px 18px #00000012;margin-bottom:14px}
+.stat b{font-size:28px;display:block}.muted{color:var(--muted);font-size:13px}
+label{display:block;font-size:13px;font-weight:bold;margin:8px 0 5px}
+input,select,textarea,button{font:inherit}input,select,textarea{width:100%;padding:10px;border:1px solid #d1d5db;border-radius:9px}
+textarea{min-height:92px;resize:vertical}.formgrid{display:grid;grid-template-columns:2fr 1.2fr 1.4fr 1fr;gap:10px}
+button{border:0;border-radius:9px;padding:10px 13px;cursor:pointer;font-weight:bold}.primary{background:var(--p);color:#fff}.secondary{background:#ede9fe;color:#4c1d95}.danger{background:#fee2e2;color:#991b1b}.ok{color:var(--ok)}.bad{color:var(--bad)}
+.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}table{width:100%;border-collapse:collapse;font-size:14px}th,td{padding:9px;border-bottom:1px solid #e5e7eb;text-align:left}th{background:#fafafa}
+.msggrid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.pill{display:inline-block;padding:4px 8px;border-radius:999px;background:#ede9fe;color:#5b21b6;font-size:12px;font-weight:bold}
+@media(max-width:850px){.grid,.formgrid,.msggrid{grid-template-columns:1fr}.tablewrap{overflow:auto}}
+</style>
+</head>
+<body>
+<header><div class="wrap"><h1 style="margin:0">PASINDAYAG S2 — Finalists SMS Monitor</h1><div>Meeting & Grand Finale Notification System • SK Nagsimbaanan</div></div></header>
+<div class="wrap">
+  <div class="grid">
+    <div class="card stat"><span class="muted">Finalists</span><b id="total">0</b></div>
+    <div class="card stat"><span class="muted">Confirmed</span><b id="confirmed">0</b></div>
+    <div class="card stat"><span class="muted">Pending</span><b id="pending">0</b></div>
+    <div class="card stat"><span class="muted">SMS Parts Sent</span><b id="sent">0</b></div>
+  </div>
+
+  <div class="card">
+    <h2>Add / Update Finalist</h2>
+    <div class="formgrid">
+      <div><label>Finalist / Group Name</label><input id="name" placeholder="Name"></div>
+      <div><label>Category</label><select id="category"><option>Singing</option><option>Dance</option><option>Human Beatbox</option><option>Full Band</option><option>Theater</option></select></div>
+      <div><label>Mobile Number</label><input id="number" placeholder="09XXXXXXXXX"></div>
+      <div><label>Production No.</label><input id="prod" placeholder="P-01"></div>
+    </div>
+    <div class="formgrid" style="grid-template-columns:1fr 3fr;margin-top:8px">
+      <div><label>Status</label><select id="status"><option>Pending</option><option>Confirmed</option></select></div>
+      <div class="actions" style="align-items:end"><button class="primary" onclick="saveFinalist()">Save Finalist</button><button class="secondary" onclick="clearForm()">Clear</button></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Meeting SMS — 3 Parts</h2>
+    <p class="muted">You can edit the text before sending. Each part is sent as a separate Semaphore message.</p>
+    <div class="msggrid">
+      <div><span class="pill">PART 1/3</span><textarea id="m1">Magandang araw! PASINDAYAG S2 (1/3): Finalists' Meeting on Oct. 3, 1:30 PM at Brgy. Nagsimbaanan Office. All finalists are requested to attend.</textarea><div class="muted" id="c1"></div></div>
+      <div><span class="pill">PART 2/3</span><textarea id="m2">PASINDAYAG S2 (2/3): Finale guidelines, performance requirements & official Production Number will be discussed. Please be on time. -SK Nagsimbaanan</textarea><div class="muted" id="c2"></div></div>
+      <div><span class="pill">PART 3/3</span><textarea id="m3">PASINDAYAG S2 (3/3): This is an automated message. Please do not reply to this SMS. For questions or concerns, kindly message us in the official Finalists GC.</textarea><div class="muted" id="c3"></div></div>
+    </div>
+    <div class="actions">
+      <button class="secondary" onclick="sendSelected(1)">Send Part 1</button>
+      <button class="secondary" onclick="sendSelected(2)">Send Part 2</button>
+      <button class="secondary" onclick="sendSelected(3)">Send Part 3</button>
+      <button class="primary" onclick="sendAllParts()">Send All 3 Parts</button>
+      <button class="secondary" onclick="exportCSV()">Export CSV</button>
+    </div>
+    <div id="notice" class="muted" style="margin-top:10px"></div>
+  </div>
+
+  <div class="card">
+    <div class="actions" style="justify-content:space-between"><h2 style="margin:0">Finalists</h2><div><button class="secondary" onclick="toggleAll(true)">Select All</button> <button class="secondary" onclick="toggleAll(false)">Clear Selection</button></div></div>
+    <div class="tablewrap"><table><thead><tr><th>Send</th><th>Name</th><th>Category</th><th>Number</th><th>Production</th><th>Status</th><th>SMS</th><th>Last Sent</th><th>Action</th></tr></thead><tbody id="rows"></tbody></table></div>
+  </div>
+</div>
+<script>
+let finalists = JSON.parse(localStorage.getItem("pasindayag_finalists_v2") || "[]");
+let editing = null;
+const $=id=>document.getElementById(id);
+function persist(){localStorage.setItem("pasindayag_finalists_v2",JSON.stringify(finalists));render()}
+function clearForm(){editing=null;["name","number","prod"].forEach(x=>$(x).value="");$("status").value="Pending";$("category").value="Singing"}
+function saveFinalist(){
+ const x={name:$("name").value.trim(),category:$("category").value,number:$("number").value.trim(),prod:$("prod").value.trim(),status:$("status").value,sent:0,last:""};
+ if(!x.name||!x.number)return alert("Please enter finalist name and mobile number.");
+ if(editing===null)finalists.push(x); else finalists[editing]={...finalists[editing],...x};
+ persist();clearForm()
+}
+function editRow(i){let x=finalists[i];editing=i;$("name").value=x.name;$("category").value=x.category;$("number").value=x.number;$("prod").value=x.prod;$("status").value=x.status;scrollTo({top:180,behavior:"smooth"})}
+function delRow(i){if(confirm("Delete this finalist?")){finalists.splice(i,1);persist()}}
+function render(){
+ $("rows").innerHTML=finalists.map((x,i)=>`<tr><td><input type="checkbox" class="pick" data-i="${i}"></td><td>${esc(x.name)}</td><td>${esc(x.category)}</td><td>${esc(x.number)}</td><td>${esc(x.prod||"-")}</td><td>${esc(x.status)}</td><td>${x.sent||0}</td><td>${esc(x.last||"-")}</td><td><button class="secondary" onclick="editRow(${i})">Edit</button> <button class="danger" onclick="delRow(${i})">Delete</button></td></tr>`).join("");
+ $("total").textContent=finalists.length;$("confirmed").textContent=finalists.filter(x=>x.status==="Confirmed").length;$("pending").textContent=finalists.filter(x=>x.status!=="Confirmed").length;$("sent").textContent=finalists.reduce((a,x)=>a+(x.sent||0),0)
+}
+function esc(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
+function toggleAll(v){document.querySelectorAll(".pick").forEach(x=>x.checked=v)}
+function selected(){return [...document.querySelectorAll(".pick:checked")].map(x=>+x.dataset.i)}
+function count(){
+ [1,2,3].forEach(n=>{let l=$("m"+n).value.length; $("c"+n).textContent=`${l} characters • approx. ${Math.max(1,Math.ceil(l/153))} SMS segment(s)`})
+}
+["m1","m2","m3"].forEach(id=>$(id).addEventListener("input",count));count();
+
+async function sendOne(i,part){
+ const x=finalists[i], message=$("m"+part).value;
+ const res=await fetch("/api/send-sms",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({number:x.number,message})});
+ const data=await res.json().catch(()=>({}));
+ if(!res.ok)throw new Error(data.error||"SMS request failed");
+ x.sent=(x.sent||0)+1;x.last=new Date().toLocaleString();persist();
+}
+async function sendSelected(part){
+ const ids=selected();if(!ids.length)return alert("Select at least one finalist.");
+ if(!confirm(`Send Part ${part} to ${ids.length} selected finalist(s)?`))return;
+ $("notice").textContent="Sending...";
+ let ok=0,fail=0;
+ for(const i of ids){try{await sendOne(i,part);ok++}catch(e){fail++}}
+ $("notice").innerHTML=`<span class="ok">${ok} sent</span>${fail?` • <span class="bad">${fail} failed</span>`:""}`;
+}
+async function sendAllParts(){
+ const ids=selected();if(!ids.length)return alert("Select at least one finalist.");
+ if(!confirm(`Send all 3 SMS parts to ${ids.length} selected finalist(s)? This uses multiple SMS credits.`))return;
+ $("notice").textContent="Sending 3 parts...";
+ let ok=0,fail=0;
+ for(const i of ids){for(let p=1;p<=3;p++){try{await sendOne(i,p);ok++}catch(e){fail++}}}
+ $("notice").innerHTML=`<span class="ok">${ok} message request(s) sent</span>${fail?` • <span class="bad">${fail} failed</span>`:""}`;
+}
+function exportCSV(){
+ const rows=[["Name","Category","Mobile","Production No.","Status","SMS Parts Sent","Last Sent"],...finalists.map(x=>[x.name,x.category,x.number,x.prod,x.status,x.sent||0,x.last||""])];
+ const csv=rows.map(r=>r.map(v=>`"${String(v??"").replaceAll('"','""')}"`).join(",")).join("\n");
+ const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv"}));a.download="pasindayag-finalists.csv";a.click()
+}
+render();
+</script>
+</body></html>
